@@ -1,98 +1,160 @@
-import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useEffect, useRef, useState, type ComponentRef } from 'react';
+import { AccessibilityInfo, Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { AnimatedIcon } from '@/components/animated-icon';
-import { HintRow } from '@/components/hint-row';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+import { FrameFlight, type Rect } from '@/components/frame-flight';
+import { BrokenImage, Refresh } from '@/components/icons';
+import { Body, PaintingPlaceholder, PrimaryButton, Title } from '@/components/ui';
+import { getArtworks } from '@/data/api';
+import type { Artwork } from '@/data/mock';
+import { loadingPaintingRect, useLayout } from '@/lib/layout';
+import { colors, fonts } from '@/theme';
 
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
-  }
-  if (Device.isDevice) {
-    return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
-    );
-  }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
-  return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
+type Status = 'loading' | 'error' | 'ready';
+
+// Screen 1: "Choose an artwork". Three paintings, stacked on phone and
+// tablet, side by side on desktop.
+export default function ChooseArtwork() {
+  const l = useLayout();
+  const [status, setStatus] = useState<Status>('loading');
+  const [items, setItems] = useState<Artwork[]>([]);
+  const [flight, setFlight] = useState<{ artwork: Artwork; from: Rect } | null>(null);
+  const fade = useRef(new Animated.Value(1)).current;
+  const cards = useRef<Record<string, ComponentRef<typeof View> | null>>({});
+
+  const load = useCallback(async (next: boolean) => {
+    setStatus('loading');
+    try {
+      setItems(await getArtworks(next));
+      setStatus('ready');
+    } catch {
+      setStatus('error');
+    }
+  }, []);
+
+  useEffect(() => {
+    load(false);
+  }, [load]);
+
+  // Coming back from the recipes screen: undo the tap animation.
+  useFocusEffect(
+    useCallback(() => {
+      fade.setValue(1);
+      setFlight(null);
+    }, [fade]),
   );
-}
 
-export default function HomeScreen() {
+  async function open(artwork: Artwork) {
+    if (flight) return;
+    const go = (framed: boolean) =>
+      router.push({ pathname: '/artwork/[id]', params: { id: artwork.id, ...(framed ? { framed: '1' } : {}) } });
+    // People who turn on Reduce Motion skip the animation entirely.
+    if (await AccessibilityInfo.isReduceMotionEnabled()) return go(false);
+    const card = cards.current[artwork.id];
+    if (!card) return go(false);
+    card.measureInWindow((x, y, width, height) => setFlight({ artwork, from: { x, y, width, height } }));
+  }
+
+  const desktop = l.bp === 'desktop';
+
   return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.heroSection}>
-          <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Expo
-          </ThemedText>
-        </ThemedView>
+    <View style={[styles.screen, { paddingTop: l.top, paddingBottom: l.bottom, paddingHorizontal: l.side }]}>
+      <Animated.View style={[styles.column, { opacity: fade }]}>
+        <Text style={[styles.appName, { fontSize: l.bp === 'phone' ? 16 : 18 }]}>Vincent van Dough</Text>
+        <View style={[styles.header, desktop && { justifyContent: 'center' }]}>
+          <Title size={l.bp === 'phone' ? 26 : 30}>Choose an artwork</Title>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Show three different paintings"
+            disabled={status === 'loading'}
+            onPress={() => load(true)}
+            style={({ pressed }) => [styles.refresh, desktop && styles.refreshDesktop, status === 'loading' && { opacity: 0.5 }, pressed && { opacity: 0.7 }]}
+          >
+            <Refresh />
+          </Pressable>
+        </View>
 
-        <ThemedText type="code" style={styles.code}>
-          get started
-        </ThemedText>
+        {status === 'error' ? (
+          <View accessibilityRole="alert" style={styles.error}>
+            <View style={styles.dashed}>
+              <BrokenImage />
+            </View>
+            <Title size={30} style={{ textAlign: 'center' }}>
+              The gallery is closed for a moment
+            </Title>
+            <Body muted style={{ textAlign: 'center' }}>
+              We couldn&apos;t load the paintings. Check your connection and try again.
+            </Body>
+            {l.bp !== 'phone' && <PrimaryButton label="Try again" onPress={() => load(false)} style={styles.inlineButton} />}
+          </View>
+        ) : (
+          <View
+            accessibilityLabel={status === 'loading' ? 'Loading paintings' : 'Three paintings'}
+            style={[styles.cards, { flexDirection: desktop ? 'row' : 'column', gap: l.bp === 'phone' ? 14 : desktop ? 28 : 20 }]}
+          >
+            {status === 'loading'
+              ? [0, 1, 2].map((i) => <View key={i} style={styles.skeleton} />)
+              : items.map((a) => (
+                  <Pressable
+                    key={a.id}
+                    ref={(r) => {
+                      cards.current[a.id] = r;
+                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Open ${a.title}`}
+                    onPress={() => open(a)}
+                    style={({ pressed }) => [styles.card, pressed && { opacity: 0.9 }]}
+                  >
+                    <PaintingPlaceholder fill={a.fill} style={StyleSheet.absoluteFill} />
+                  </Pressable>
+                ))}
+          </View>
+        )}
+        {status === 'loading' && <Body muted style={styles.loadingText}>Hanging three paintings…</Body>}
+        {status === 'error' && l.bp === 'phone' && <PrimaryButton label="Try again" onPress={() => load(false)} />}
+      </Animated.View>
 
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
-          />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-          />
-        </ThemedView>
-
-        {Platform.OS === 'web' && <WebBadge />}
-      </SafeAreaView>
-    </ThemedView>
+      {flight && (
+        <FrameFlight
+          from={flight.from}
+          to={loadingPaintingRect(l)}
+          fill={flight.artwork.fill}
+          onGrowStart={() => Animated.timing(fade, { toValue: 0, duration: 500, useNativeDriver: false }).start()}
+          onDone={() => router.push({ pathname: '/artwork/[id]', params: { id: flight.artwork.id, framed: '1' } })}
+        />
+      )}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    flexDirection: 'row',
-  },
-  safeArea: {
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    alignItems: 'center',
-    gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
-    maxWidth: MaxContentWidth,
-  },
-  heroSection: {
+  screen: { flex: 1, backgroundColor: colors.background },
+  column: { flex: 1, gap: 18 },
+  appName: { alignSelf: 'center', fontFamily: fonts.serif, color: colors.iris },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 44 },
+  refresh: {
+    width: 44,
+    height: 44,
+    borderRadius: 999,
+    backgroundColor: colors.brown,
     alignItems: 'center',
     justifyContent: 'center',
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
   },
-  title: {
-    textAlign: 'center',
+  refreshDesktop: { position: 'absolute', right: 0 },
+  cards: { flex: 1, minHeight: 0 },
+  card: { flex: 1, minHeight: 0, minWidth: 0 },
+  skeleton: { flex: 1, backgroundColor: colors.surface },
+  loadingText: { textAlign: 'center', fontSize: 14 },
+  error: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 14, paddingHorizontal: 20, maxWidth: 460, alignSelf: 'center' },
+  dashed: {
+    width: 120,
+    height: 150,
+    borderRadius: 14,
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    borderColor: colors.dashed,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  code: {
-    textTransform: 'uppercase',
-  },
-  stepContainer: {
-    gap: Spacing.three,
-    alignSelf: 'stretch',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
-    borderRadius: Spacing.four,
-  },
+  inlineButton: { marginTop: 12, minWidth: 240 },
 });
