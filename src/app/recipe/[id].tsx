@@ -53,7 +53,7 @@ export default function RecipeDetails() {
 
   const photo = (
     <View style={{ alignItems: 'center', gap: 14 }}>
-      <RecipePhoto uri={recipe.image} style={[styles.photo, { width: photoSize, height: photoSize, borderRadius: phone ? 20 : 24 }]} />
+      <RecipePhoto recipe={recipe} style={[styles.photo, { width: photoSize, height: photoSize, borderRadius: phone ? 20 : 24 }]} />
       {!!from && (
         <Text style={styles.from}>
           From the painting: <Text style={{ color: colors.text }}>{from}</Text>
@@ -100,7 +100,7 @@ export default function RecipeDetails() {
               <Steps recipe={recipe} />
             </View>
           )}
-          <Footer url={recipe.sourceUrl} />
+          <Footer recipe={recipe} />
         </View>
       </ScrollView>
     </View>
@@ -172,7 +172,17 @@ function Steps({ recipe }: { recipe: Recipe }) {
   );
 }
 
-function Footer({ url }: { url: string }) {
+// Credits the source. House recipes say plainly that nobody has cooked
+// them yet (Madhura's call, 2026-10-26).
+function Footer({ recipe }: { recipe: Recipe }) {
+  if (recipe.by === 'house') {
+    return (
+      <View style={styles.footer}>
+        <Text style={styles.footerText}>Recipe by Vincent van Dough · Written for this app, not kitchen-tested</Text>
+      </View>
+    );
+  }
+  const url = recipe.sourceUrl;
   return (
     <View style={styles.footer}>
       <Text style={styles.footerText}>

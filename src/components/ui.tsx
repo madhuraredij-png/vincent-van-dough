@@ -82,11 +82,31 @@ export function Painting({ uri, fit = 'cover', style }: { uri: string; fit?: 'co
 
 // A recipe photo from TheMealDB, rounded (Madhura's call). TheMealDB serves
 // each photo at 700px, plus smaller copies: "medium" (350px) is plenty for
-// the list rows and keeps them quick to load on a phone.
-export function RecipePhoto({ uri, size = 'full', style }: { uri: string; size?: 'medium' | 'full'; style?: StyleProp<ViewStyle> }) {
+// the list rows and keeps them quick to load on a phone. House recipes have
+// no photo, so a warm color tile stands in, as in the Milestone 1 mock.
+export function RecipePhoto({
+  recipe,
+  size = 'full',
+  style,
+}: {
+  recipe: { image: string; fill?: readonly [string, string] };
+  size?: 'medium' | 'full';
+  style?: StyleProp<ViewStyle>;
+}) {
+  if (!recipe.image) {
+    return (
+      <LinearGradient
+        colors={recipe.fill ?? ['#CDB89A', '#8C6F4E']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0.9, y: 1 }}
+        style={[{ borderRadius: 16 }, style]}
+      />
+    );
+  }
+  const uri = size === 'full' ? recipe.image : `${recipe.image}/${size}`;
   return (
     <View style={[{ borderRadius: 16, overflow: 'hidden', backgroundColor: colors.surface }, style]}>
-      <Image source={{ uri: size === 'full' ? uri : `${uri}/${size}` }} contentFit="cover" transition={250} accessible={false} style={StyleSheet.absoluteFill} />
+      <Image source={{ uri }} contentFit="cover" transition={250} accessible={false} style={StyleSheet.absoluteFill} />
     </View>
   );
 }

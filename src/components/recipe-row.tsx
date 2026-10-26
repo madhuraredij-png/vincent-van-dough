@@ -54,7 +54,7 @@ export function RecipeRow({
           ],
         }}
       >
-        <RecipePhoto uri={recipe.image} size="medium" style={[styles.photo, { width: size, height: size }]} />
+        <RecipePhoto recipe={recipe} size="medium" style={[styles.photo, { width: size, height: size }]} />
       </Animated.View>
       <Text style={[styles.name, active && { color: colors.iris }]}>{recipe.name}</Text>
     </Pressable>

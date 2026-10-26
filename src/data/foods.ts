@@ -4,11 +4,12 @@ import type { Food } from './match';
 // in Milestone 4. Claude drafted them by looking at each artwork; Madhura
 // reviews them. `label` is what the app shows after "Spotted:";
 // `ingredients` are the TheMealDB names searched for it (its list is at
-// www.themealdb.com/api/json/v1/1/list.php?i=list). An empty list means
-// TheMealDB has no recipes with that food, so it is shown but not searched.
+// www.themealdb.com/api/json/v1/1/list.php?i=list); house recipes answer to
+// the same names (house-recipes.ts). An empty list means no recipe uses
+// that food, so it is shown but not searched.
 // Written f(label, ...ingredients) to keep each artwork on one line.
-// A prepared food adds `dishes`: the TheMealDB meal IDs of its own recipe,
-// shown first (Madhura's rule, 2026-10-26).
+// A prepared food adds `dishes`: the meal IDs of its own recipe (TheMealDB
+// or house), shown first (Madhura's rule, 2026-10-26).
 // An artwork with no entry shows the no-recipes screen.
 const f = (label: string, ...ingredients: string[]): Food => ({ label, ingredients });
 
@@ -17,8 +18,8 @@ const BREADS = ['53308', '53556', '53408'];
 
 export const FOODS: Record<string, Food[]> = {
   // The Brioche
-  '436946': [{ ...f('brioche', 'Bread'), dishes: BREADS }, // no brioche recipe in TheMealDB, so breads
-    f('plums'), f('peaches', 'Peaches'), f('grapes')],
+  '436946': [{ ...f('brioche', 'Bread'), dishes: ['vvd-brioche'] }, // house recipe
+    f('plums', 'Plums'), f('peaches', 'Peaches'), f('grapes', 'Grapes')],
   // Still Life with Apples and Pears
   '435883': [f('apples', 'Apples', 'Cooking Apples'), f('pears', 'Pears')],
   // Still Life with a Ginger Jar and Eggplants
@@ -31,34 +32,34 @@ export const FOODS: Record<string, Food[]> = {
   // Still Life
   '436305': [f('lemon', 'Lemon', 'Lemons'), f('bread', 'Bread'), f('walnuts', 'Walnuts'), f('wine', 'White Wine', 'Dry White Wine')],
   // Still Life with a Glass and Oysters
-  '436636': [f('oysters', 'Oysters'), f('lemon', 'Lemon', 'Lemons'), f('grapes')],
+  '436636': [f('oysters', 'Oysters'), f('lemon', 'Lemon', 'Lemons'), f('grapes', 'Grapes')],
   // Still Life with Lobster and Fruit
-  '435663': [f('lobster', 'Lobster'), f('lemon', 'Lemon', 'Lemons'), f('peaches', 'Peaches'), f('grapes'), f('melon')],
+  '435663': [f('lobster', 'Lobster'), f('lemon', 'Lemon', 'Lemons'), f('peaches', 'Peaches'), f('grapes', 'Grapes'), f('melon', 'Melon')],
   // Still Life: A Banqueting Scene
-  '436637': [f('lobster', 'Lobster'), f('lemon', 'Lemon', 'Lemons'), f('peaches', 'Peaches'), f('grapes')],
+  '436637': [f('lobster', 'Lobster'), f('lemon', 'Lemon', 'Lemons'), f('peaches', 'Peaches'), f('grapes', 'Grapes')],
   // Basket of Fruit
-  '816624': [f('figs', 'Figs'), f('pomegranate', 'Pomegranate'), f('grapes'), f('quince')],
+  '816624': [f('figs', 'Figs'), f('pomegranate', 'Pomegranate'), f('grapes', 'Grapes'), f('quince', 'Quince')],
   // Still Life of Fruit and Game
-  '437238': [f('duck', 'Duck Legs', 'Duck'), f('peaches', 'Peaches'), f('grapes'), f('hare')],
+  '437238': [f('duck', 'Duck Legs', 'Duck'), f('peaches', 'Peaches'), f('grapes', 'Grapes'), f('hare', 'Hare')],
   // A Cat Stealing Fish
   '437376': [f('fish', 'White Fish', 'White Fish Fillets', 'Fish fillet'), f('pomegranate', 'Pomegranate')],
   // Fish Market
-  '679844': [f('salmon', 'Salmon'), f('cod', 'Cod'), f('carp')],
+  '679844': [f('salmon', 'Salmon'), f('cod', 'Cod'), f('carp', 'Carp')],
   // Still Life with a Vase of Flowers, Melon, Peaches, and Grapes
-  '888924': [f('peaches', 'Peaches'), f('melon'), f('grapes')],
+  '888924': [f('peaches', 'Peaches'), f('melon', 'Melon'), f('grapes', 'Grapes')],
   // Still Life with Strawberries
-  '436345': [f('strawberries', 'Strawberries'), f('peas', 'Peas', 'Frozen Peas'), f('asparagus', 'Asparagus'), f('artichoke')],
+  '436345': [f('strawberries', 'Strawberries'), f('peas', 'Peas', 'Frozen Peas'), f('asparagus', 'Asparagus'), f('artichoke', 'Artichoke')],
   // New Year's Sake and Sushi
   '54455': [{ ...f('sushi', 'Sushi Rice'), dishes: ['53065'] }, // Sushi
     f('tuna', 'Tuna'), f('sake', 'Sake')],
   // Wine Goblet and Lacquer Food Box with New Year's Meal
-  '54731': [f('rice', 'Rice'), f('shrimp', 'Shrimp', 'Prawns'), f('sake', 'Sake')],
+  '54731': [f('rice', 'Rice'), { ...f('shrimp', 'Shrimp', 'Prawns'), dishes: ['vvd-ebi-no-umani'] }, f('sake', 'Sake')],
   // Teabowl and Powder Cake in a Tube
-  '54105': [f('rice cake', 'Rice Flour', 'Sticky Rice Flour', 'Glutinous Rice'), f('tea')],
+  '54105': [{ ...f('rice cake', 'Rice Flour', 'Sticky Rice Flour', 'Glutinous Rice'), dishes: ['vvd-kinako-dango'] }, f('tea')],
   // Princess with Attendants Picnicking in the Open Air, Folio from the Da
   '448468': [f('rice', 'Rice', 'Basmati Rice'), f('fruit')],
   // Ebisu and Daikoku Celebrating the New Year Festival
-  '57260': [f('sea bream', 'White Fish', 'Fish fillet'), f('sake', 'Sake'), f('rice', 'Rice')],
+  '57260': [{ ...f('sea bream', 'White Fish', 'Fish fillet'), dishes: ['vvd-tai-shioyaki'] }, f('sake', 'Sake'), f('rice', 'Rice')],
   // The Kitchen of a Joroya.
   '37254': [f('rice', 'Rice'), f('fish', 'White Fish', 'Fish fillet')],
   // Kitchen Scene
@@ -82,7 +83,7 @@ export const FOODS: Record<string, Food[]> = {
   // Halt of the Hunt
   '437865': [f('bread', 'Bread'), f('chicken', 'Chicken'), f('wine', 'Red Wine')],
   // The Silver Tureen
-  '435887': [f('hare'), f('apples', 'Apples'), f('pears', 'Pears'), f('orange', 'Orange')],
+  '435887': [f('hare', 'Hare'), f('apples', 'Apples'), f('pears', 'Pears'), f('orange', 'Orange')],
   // The Breakfast
   '810982': [f('turkey', 'Turkey'), f('bread', 'Bread')],
   // At Dinner

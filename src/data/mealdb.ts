@@ -1,3 +1,4 @@
+import { houseRecipe, houseRecipesUsing, isHouseRecipe } from './house-recipes';
 import { splitSteps, type MealHit } from './match';
 import type { Ingredient, Recipe } from './types';
 
@@ -16,12 +17,14 @@ async function get<T>(path: string): Promise<T> {
 
 // Meals that use one ingredient. Names must match TheMealDB's ingredient
 // list (www.themealdb.com/api/json/v1/1/list.php?i=list); an unknown name
-// gives no meals rather than an error.
+// gives no meals rather than an error. House recipes that use the
+// ingredient are added to TheMealDB's results.
 type FilterResponse = { meals: { idMeal: string; strMeal: string; strMealThumb: string }[] | null };
 
 export async function searchIngredient(name: string): Promise<MealHit[]> {
   const data = await get<FilterResponse>(`filter.php?i=${encodeURIComponent(name)}`);
-  return (data.meals ?? []).map((m) => ({ id: m.idMeal, name: m.strMeal, image: m.strMealThumb }));
+  const meals = (data.meals ?? []).map((m) => ({ id: m.idMeal, name: m.strMeal, image: m.strMealThumb }));
+  return [...meals, ...houseRecipesUsing(name)];
 }
 
 // A full meal record. Ingredients come as 20 numbered pairs of fields, with
@@ -54,6 +57,12 @@ export function cachedRecipe(id: string): Recipe | undefined {
 }
 
 async function lookup(id: string): Promise<Recipe> {
+  if (isHouseRecipe(id)) {
+    const r = houseRecipe(id);
+    if (!r) throw new Error(`No house recipe ${id}`);
+    loaded.set(id, r);
+    return r;
+  }
   const data = await get<{ meals: Meal[] | null }>(`lookup.php?i=${encodeURIComponent(id)}`);
   const m = data.meals?.[0];
   if (!m) throw new Error(`TheMealDB has no meal ${id}`);
@@ -70,6 +79,7 @@ export function toRecipe(m: Meal): Recipe {
   }
   return {
     id: m.idMeal,
+    by: 'mealdb',
     name: m.strMeal,
     image: m.strMealThumb,
     ingredients,

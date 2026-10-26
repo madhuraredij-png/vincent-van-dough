@@ -9,14 +9,17 @@ export type Artwork = {
 
 export type Ingredient = { name: string; amount: string };
 
-// A recipe as the screens use it. Filled from a TheMealDB meal (see mealdb.ts).
+// A recipe as the screens use it. Filled from a TheMealDB meal (see
+// mealdb.ts), or written for this app (see house-recipes.ts).
 export type Recipe = {
-  id: string; // TheMealDB's meal ID
+  id: string; // TheMealDB's meal ID, or "vvd-..." for a house recipe
+  by: 'mealdb' | 'house';
   name: string;
-  image: string; // photo URL on www.themealdb.com
+  image: string; // photo URL on www.themealdb.com; empty for house recipes
+  fill?: readonly [string, string]; // colors standing in for a missing photo
   ingredients: Ingredient[];
   steps: string[]; // empty when the source has no written method
-  sourceUrl: string;
+  sourceUrl: string; // empty for house recipes
 };
 
 // What "looking at" a painting produced: the foods spotted in it and the
