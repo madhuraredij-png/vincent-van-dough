@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { Animated, Easing, StyleSheet, View } from 'react-native';
 
-import { GiltFrame, PaintingPlaceholder } from '@/components/ui';
+import { GiltFrame, Painting } from '@/components/ui';
 import { gilt, motion } from '@/theme';
 
 export type Rect = { x: number; y: number; width: number; height: number };
@@ -13,13 +13,13 @@ export type Rect = { x: number; y: number; width: number; height: number };
 export function FrameFlight({
   from,
   to,
-  fill,
+  image,
   onGrowStart,
   onDone,
 }: {
   from: Rect;
   to: Rect;
-  fill: readonly [string, string];
+  image: string;
   onGrowStart: () => void;
   onDone: () => void;
 }) {
@@ -56,7 +56,7 @@ export function FrameFlight({
         <Animated.View style={{ position: 'absolute', left: negPad, top: negPad, right: negPad, bottom: negPad, opacity: frame }}>
           <GiltFrame />
         </Animated.View>
-        <PaintingPlaceholder fill={fill} style={StyleSheet.absoluteFill} />
+        <Painting uri={image} style={StyleSheet.absoluteFill} />
       </Animated.View>
     </View>
   );

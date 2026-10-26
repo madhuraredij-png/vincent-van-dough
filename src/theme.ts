@@ -15,13 +15,6 @@ export const colors = {
   dashed: '#4A3F33',
 } as const;
 
-// Placeholder fills until real images arrive in Milestone 2 (paintings) and 3 (recipes).
-export const paintingFills = [
-  ['#6E6458', '#2E2925'],
-  ['#7A7468', '#35302A'],
-  ['#66605A', '#2A2622'],
-] as const;
-
 // The antique gold gilt frame (option B, picked by Madhura).
 export const gilt = {
   gradient: ['#3A2A12', '#9C7A3C', '#5E4620', '#B8934E', '#5A421C', '#8E6C32', '#33240E'],

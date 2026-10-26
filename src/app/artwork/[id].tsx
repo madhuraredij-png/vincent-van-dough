@@ -4,9 +4,10 @@ import { AccessibilityInfo, ActivityIndicator, Animated, Easing, StyleSheet, Tex
 
 import type { Rect } from '@/components/frame-flight';
 import { RecipeRow } from '@/components/recipe-row';
-import { BackButton, Body, GiltFrame, PaintingPlaceholder, PrimaryButton, Title } from '@/components/ui';
-import { getArtwork, getRecipe, getRecipesFor } from '@/data/api';
+import { BackButton, Body, FitLine, GiltFrame, Painting, PrimaryButton, Title } from '@/components/ui';
+import { getArtwork, getRecipe, getRecipesFor, isInGallery, peekArtwork } from '@/data/api';
 import { noRecipeButtons, noRecipeLines, type ArtworkResult, type Recipe } from '@/data/mock';
+import type { Artwork } from '@/data/types';
 import { loadingPaintingRect, TITLE_GAP, TITLE_ROW_HEIGHT, useLayout, type Layout } from '@/lib/layout';
 import { colors, fonts, gilt, motion } from '@/theme';
 
@@ -24,8 +25,11 @@ const SPOTTED = 22;
 // into place and the recipes slide up.
 export default function Recipes() {
   const { id, framed } = useLocalSearchParams<{ id: string; framed?: string }>();
-  const artwork = getArtwork(id);
   const l = useLayout();
+  // After a tap the painting is already loaded. Opened from a link, it's
+  // fetched from the Met first.
+  const [artwork, setArtwork] = useState<Artwork | undefined>(() => peekArtwork(id));
+  const [artworkFailed, setArtworkFailed] = useState(false);
   const [status, setStatus] = useState<Status>('loading');
   const [result, setResult] = useState<ArtworkResult | null>(null);
   const [empty, setEmpty] = useState({ line: noRecipeLines[0], button: noRecipeButtons[0] });
@@ -64,11 +68,42 @@ export default function Recipes() {
     load();
   }, [load]);
 
-  if (!artwork) {
+  const loadArtwork = useCallback(() => {
+    setArtworkFailed(false);
+    getArtwork(id).then(setArtwork, () => setArtworkFailed(true));
+  }, [id]);
+
+  useEffect(() => {
+    if (artwork?.id !== id) loadArtwork();
+  }, [artwork, id, loadArtwork]);
+
+  if (artworkFailed && isInGallery(id)) {
+    return (
+      <View style={[styles.screen, styles.center, { gap: 14 }]}>
+        <Title size={30} style={{ textAlign: 'center' }}>
+          The gallery is closed for a moment
+        </Title>
+        <Body muted style={{ textAlign: 'center' }}>
+          We couldn&apos;t load this painting. Check your connection and try again.
+        </Body>
+        <PrimaryButton label="Try again" onPress={loadArtwork} style={{ marginTop: 12, minWidth: 240 }} />
+      </View>
+    );
+  }
+
+  if (!isInGallery(id)) {
     return (
       <View style={[styles.screen, styles.center]}>
         <Body>That painting isn&apos;t in the gallery.</Body>
         <PrimaryButton label="Back to the gallery" onPress={() => router.replace('/')} style={{ marginTop: 16 }} />
+      </View>
+    );
+  }
+
+  if (!artwork) {
+    return (
+      <View accessibilityRole="progressbar" accessibilityLabel="Loading painting" style={[styles.screen, styles.center]}>
+        <ActivityIndicator color={colors.textMuted} />
       </View>
     );
   }
@@ -86,10 +121,22 @@ export default function Recipes() {
 
   const titleBlock = (
     <View style={styles.titleBlock}>
-      <Title size={titleSize} style={{ textAlign: 'center' }}>
-        {artwork.title}
-      </Title>
-      <Text style={styles.artist}>{artwork.artist}</Text>
+      {/* Some Met titles run to 15 words. The phone and tablet header row has
+          room for one line, so long titles shrink to fit (Madhura's call);
+          desktop has room to wrap to 3 lines. */}
+      {desktop ? (
+        <Title size={titleSize} lines={3} style={{ textAlign: 'center' }}>
+          {artwork.title}
+        </Title>
+      ) : (
+        <FitLine header size={titleSize} min={20} fontFamily={fonts.serif} style={styles.title}>
+          {artwork.title}
+        </FitLine>
+      )}
+      {/* Credit only, no link (Madhura's call). Met Open Access images are CC0. */}
+      <FitLine size={13} min={11} fontFamily={fonts.medium} style={styles.artist}>
+        {`${artwork.artist} · Image: The Met`}
+      </FitLine>
     </View>
   );
 
@@ -176,7 +223,7 @@ export default function Recipes() {
         <Animated.View style={[styles.frame, { opacity: frame }]}>
           <GiltFrame />
         </Animated.View>
-        <PaintingPlaceholder fill={artwork.fill} style={StyleSheet.absoluteFill} />
+        <Painting uri={artwork.image} style={StyleSheet.absoluteFill} />
       </Animated.View>
 
       {status === 'loading' && (
@@ -225,7 +272,8 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   center: { alignItems: 'center', justifyContent: 'center', padding: 24 },
   titleRow: { position: 'absolute', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 44 },
-  titleBlock: { alignItems: 'center', gap: 4 },
+  titleBlock: { alignItems: 'center', alignSelf: 'stretch', gap: 4 },
+  title: { color: colors.text, textAlign: 'center' },
   artist: { fontFamily: fonts.medium, fontSize: 13, color: colors.textMuted, textAlign: 'center' },
   backSlot: { position: 'absolute', zIndex: 2 },
   frame: { position: 'absolute', top: -gilt.thickness, left: -gilt.thickness, right: -gilt.thickness, bottom: -gilt.thickness },

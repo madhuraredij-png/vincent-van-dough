@@ -1,36 +1,82 @@
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import type { ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
+import { useState, type ReactNode } from 'react';
+import { Platform, Pressable, StyleSheet, Text, View, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
 
 import { ChevronLeft } from '@/components/icons';
 import { colors, fonts, gilt } from '@/theme';
 
 // Small building blocks shared by every screen.
 
-export function Title({ children, size = 28, style }: { children: ReactNode; size?: number; style?: StyleProp<TextStyle> }) {
+export function Title({ children, size = 28, lines, style }: { children: ReactNode; size?: number; lines?: number; style?: StyleProp<TextStyle> }) {
   return (
-    <Text accessibilityRole="header" style={[{ fontFamily: fonts.serif, fontSize: size, lineHeight: size * 1.1, color: colors.text }, style]}>
+    <Text accessibilityRole="header" numberOfLines={lines} style={[{ fontFamily: fonts.serif, fontSize: size, lineHeight: size * 1.1, color: colors.text }, style]}>
       {children}
     </Text>
   );
+}
+
+// One line of text that shrinks to fit its width, from `size` down to
+// `min`; past that it ends in "…" (Madhura's call for long Met titles).
+// iOS and Android shrink text natively. The browser can't, so on the web
+// the text is measured with a canvas and the size worked out from that.
+export function FitLine({
+  children,
+  size,
+  min,
+  fontFamily,
+  style,
+  header,
+}: {
+  children: string;
+  size: number;
+  min: number;
+  fontFamily: string;
+  style?: StyleProp<TextStyle>;
+  header?: boolean;
+}) {
+  const [width, setWidth] = useState(0);
+  const fitted = Platform.OS === 'web' && width > 0 ? fitSize(children, fontFamily, size, min, width) : size;
+  return (
+    <Text
+      accessibilityRole={header ? 'header' : undefined}
+      numberOfLines={1}
+      adjustsFontSizeToFit={Platform.OS !== 'web'}
+      minimumFontScale={min / size}
+      onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
+      style={[{ fontFamily, fontSize: fitted, lineHeight: size * 1.1, alignSelf: 'stretch' }, style]}
+    >
+      {children}
+    </Text>
+  );
+}
+
+let canvas: { getContext(kind: '2d'): { font: string; measureText(t: string): { width: number } } | null } | null = null;
+function fitSize(text: string, fontFamily: string, size: number, min: number, width: number): number {
+  if (typeof document === 'undefined') return size;
+  canvas ??= document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return size;
+  ctx.font = `${size}px ${fontFamily}`;
+  const natural = ctx.measureText(text).width;
+  // Round down to whole pixels so the text never sits a hair too wide.
+  return natural <= width ? size : Math.max(min, Math.floor((size * width) / natural));
 }
 
 export function Body({ children, style, muted }: { children: ReactNode; style?: StyleProp<TextStyle>; muted?: boolean }) {
   return <Text style={[styles.body, muted && { color: colors.textMuted }, style]}>{children}</Text>;
 }
 
-// Stand-in for a painting until real Met images arrive in Milestone 2.
-// Paintings have square corners (Madhura's call); recipe photos are rounded.
-export function PaintingPlaceholder({ fill, style, label = true }: { fill: readonly [string, string]; style?: StyleProp<ViewStyle>; label?: boolean }) {
+// A painting from the Met. Square corners (Madhura's call); recipe photos
+// are rounded. The dark surface shows while the image downloads.
+// expo-image caches downloads, so the same painting on the next screen
+// appears at once.
+export function Painting({ uri, fit = 'cover', style }: { uri: string; fit?: 'cover' | 'contain'; style?: StyleProp<ViewStyle> }) {
   return (
-    <LinearGradient colors={fill} start={{ x: 0, y: 0 }} end={{ x: 0.9, y: 1 }} style={[{ overflow: 'hidden' }, style]}>
-      {label && (
-        <View style={styles.pill}>
-          <Text style={styles.pillText}>PAINTING PLACEHOLDER</Text>
-        </View>
-      )}
-    </LinearGradient>
+    <View style={[{ overflow: 'hidden', backgroundColor: colors.surface }, style]}>
+      <Image source={{ uri }} contentFit={fit} transition={250} accessible={false} style={StyleSheet.absoluteFill} />
+    </View>
   );
 }
 
@@ -75,16 +121,6 @@ export function PrimaryButton({ label, onPress, style }: { label: string; onPres
 
 const styles = StyleSheet.create({
   body: { fontFamily: fonts.regular, fontSize: 15, lineHeight: 22, color: colors.text },
-  pill: {
-    position: 'absolute',
-    top: 14,
-    left: 14,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: 999,
-    backgroundColor: 'rgba(20,18,16,0.6)',
-  },
-  pillText: { fontFamily: fonts.semibold, fontSize: 11, letterSpacing: 0.66, color: '#FFFFFF' },
   back: { width: 44, height: 44, marginLeft: -10, alignItems: 'center', justifyContent: 'center' },
   primary: {
     minHeight: 56,
