@@ -1,8 +1,8 @@
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import type { ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
+import { useState, type ReactNode } from 'react';
+import { Platform, Pressable, StyleSheet, Text, View, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
 
 import { ChevronLeft } from '@/components/icons';
 import { colors, fonts, gilt } from '@/theme';
@@ -15,6 +15,53 @@ export function Title({ children, size = 28, lines, style }: { children: ReactNo
       {children}
     </Text>
   );
+}
+
+// One line of text that shrinks to fit its width, from `size` down to
+// `min`; past that it ends in "…" (Madhura's call for long Met titles).
+// iOS and Android shrink text natively. The browser can't, so on the web
+// the text is measured with a canvas and the size worked out from that.
+export function FitLine({
+  children,
+  size,
+  min,
+  fontFamily,
+  style,
+  header,
+}: {
+  children: string;
+  size: number;
+  min: number;
+  fontFamily: string;
+  style?: StyleProp<TextStyle>;
+  header?: boolean;
+}) {
+  const [width, setWidth] = useState(0);
+  const fitted = Platform.OS === 'web' && width > 0 ? fitSize(children, fontFamily, size, min, width) : size;
+  return (
+    <Text
+      accessibilityRole={header ? 'header' : undefined}
+      numberOfLines={1}
+      adjustsFontSizeToFit={Platform.OS !== 'web'}
+      minimumFontScale={min / size}
+      onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
+      style={[{ fontFamily, fontSize: fitted, lineHeight: size * 1.1, alignSelf: 'stretch' }, style]}
+    >
+      {children}
+    </Text>
+  );
+}
+
+let canvas: { getContext(kind: '2d'): { font: string; measureText(t: string): { width: number } } | null } | null = null;
+function fitSize(text: string, fontFamily: string, size: number, min: number, width: number): number {
+  if (typeof document === 'undefined') return size;
+  canvas ??= document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return size;
+  ctx.font = `${size}px ${fontFamily}`;
+  const natural = ctx.measureText(text).width;
+  // Round down to whole pixels so the text never sits a hair too wide.
+  return natural <= width ? size : Math.max(min, Math.floor((size * width) / natural));
 }
 
 export function Body({ children, style, muted }: { children: ReactNode; style?: StyleProp<TextStyle>; muted?: boolean }) {

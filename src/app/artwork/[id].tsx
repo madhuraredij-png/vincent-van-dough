@@ -4,7 +4,7 @@ import { AccessibilityInfo, ActivityIndicator, Animated, Easing, StyleSheet, Tex
 
 import type { Rect } from '@/components/frame-flight';
 import { RecipeRow } from '@/components/recipe-row';
-import { BackButton, Body, GiltFrame, Painting, PrimaryButton, Title } from '@/components/ui';
+import { BackButton, Body, FitLine, GiltFrame, Painting, PrimaryButton, Title } from '@/components/ui';
 import { getArtwork, getRecipe, getRecipesFor, isInGallery, peekArtwork } from '@/data/api';
 import { noRecipeButtons, noRecipeLines, type ArtworkResult, type Recipe } from '@/data/mock';
 import type { Artwork } from '@/data/types';
@@ -122,14 +122,21 @@ export default function Recipes() {
   const titleBlock = (
     <View style={styles.titleBlock}>
       {/* Some Met titles run to 15 words. The phone and tablet header row has
-          room for one line, so longer titles end in "…"; desktop shows up to 3. */}
-      <Title size={titleSize} lines={desktop ? 3 : 1} style={{ textAlign: 'center' }}>
-        {artwork.title}
-      </Title>
+          room for one line, so long titles shrink to fit (Madhura's call);
+          desktop has room to wrap to 3 lines. */}
+      {desktop ? (
+        <Title size={titleSize} lines={3} style={{ textAlign: 'center' }}>
+          {artwork.title}
+        </Title>
+      ) : (
+        <FitLine header size={titleSize} min={20} fontFamily={fonts.serif} style={styles.title}>
+          {artwork.title}
+        </FitLine>
+      )}
       {/* Credit only, no link (Madhura's call). Met Open Access images are CC0. */}
-      <Text numberOfLines={1} style={styles.artist}>
-        {artwork.artist} · Image: The Met
-      </Text>
+      <FitLine size={13} min={11} fontFamily={fonts.medium} style={styles.artist}>
+        {`${artwork.artist} · Image: The Met`}
+      </FitLine>
     </View>
   );
 
@@ -266,6 +273,7 @@ const styles = StyleSheet.create({
   center: { alignItems: 'center', justifyContent: 'center', padding: 24 },
   titleRow: { position: 'absolute', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 44 },
   titleBlock: { alignItems: 'center', alignSelf: 'stretch', gap: 4 },
+  title: { color: colors.text, textAlign: 'center' },
   artist: { fontFamily: fonts.medium, fontSize: 13, color: colors.textMuted, textAlign: 'center' },
   backSlot: { position: 'absolute', zIndex: 2 },
   frame: { position: 'absolute', top: -gilt.thickness, left: -gilt.thickness, right: -gilt.thickness, bottom: -gilt.thickness },
