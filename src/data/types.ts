@@ -7,6 +7,9 @@ export type Artwork = {
   sourceUrl: string; // the painting's page on metmuseum.org
 };
 
+// A part of an image, in fractions of its width and height (0 to 1).
+export type Box = { x: number; y: number; w: number; h: number };
+
 export type Ingredient = { name: string; amount: string };
 
 // A recipe as the screens use it. Filled from a TheMealDB meal (see

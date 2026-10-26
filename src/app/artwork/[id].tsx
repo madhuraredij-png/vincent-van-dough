@@ -7,6 +7,7 @@ import { RecipeRow } from '@/components/recipe-row';
 import { BackButton, Body, FitLine, GiltFrame, Painting, PrimaryButton, Title } from '@/components/ui';
 import { getArtwork, getRecipesFor, isInGallery, peekArtwork } from '@/data/api';
 import { noRecipeButtons, noRecipeLines } from '@/data/copy';
+import { cropFor } from '@/data/crops';
 import type { Artwork, ArtworkResult, Recipe } from '@/data/types';
 import { loadingPaintingRect, TITLE_GAP, TITLE_ROW_HEIGHT, useLayout, type Layout } from '@/lib/layout';
 import { colors, fonts, gilt, motion } from '@/theme';
@@ -141,7 +142,13 @@ export default function Recipes() {
   );
 
   const goToRecipe = (r: Recipe) =>
-    router.push({ pathname: '/recipe/[id]', params: { id: r.id, from: (result?.matches[r.id] ?? []).join(', ') } });
+    router.push({ pathname: '/recipe/[id]', params: { id: r.id, artwork: id, from: (result?.matches[r.id] ?? []).join(', ') } });
+
+  // House recipes show a close-up of their food in this painting.
+  const cropOf = (r: Recipe) => {
+    const box = r.image ? undefined : cropFor(id, result?.matches[r.id] ?? []);
+    return box && { uri: artwork.image, box };
+  };
 
   const details =
     status !== 'ready' || !result ? null : recipes.length === 0 ? (
@@ -163,7 +170,7 @@ export default function Recipes() {
         </Text>
         <View style={{ gap: ROW_GAP }}>
           {recipes.map((r, i) => (
-            <RecipeRow key={r.id} recipe={r} index={i} size={desktop ? 96 : 84} onPress={() => goToRecipe(r)} />
+            <RecipeRow key={r.id} recipe={r} crop={cropOf(r)} index={i} size={desktop ? 96 : 84} onPress={() => goToRecipe(r)} />
           ))}
         </View>
       </View>

@@ -4,7 +4,8 @@ import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, Vi
 
 import { ChevronDown, ExternalArrow } from '@/components/icons';
 import { BackButton, Body, PrimaryButton, RecipePhoto, Title } from '@/components/ui';
-import { getRecipe, peekRecipe } from '@/data/api';
+import { getRecipe, peekArtwork, peekRecipe } from '@/data/api';
+import { cropFor } from '@/data/crops';
 import type { Recipe } from '@/data/types';
 import { TITLE_ROW_HEIGHT, useLayout } from '@/lib/layout';
 import { colors, fonts } from '@/theme';
@@ -13,7 +14,7 @@ import { colors, fonts } from '@/theme';
 // the photo beside the ingredients with the steps below. Desktop puts the
 // photo on the left and ingredients plus steps on the right.
 export default function RecipeDetails() {
-  const { id, from } = useLocalSearchParams<{ id: string; from?: string }>();
+  const { id, from, artwork: artworkId } = useLocalSearchParams<{ id: string; from?: string; artwork?: string }>();
   const l = useLayout();
   // After a tap the recipe is already loaded. Opened from a link, it's
   // fetched from TheMealDB first.
@@ -51,9 +52,15 @@ export default function RecipeDetails() {
   const desktop = l.bp === 'desktop';
   const photoSize = phone ? 200 : desktop ? Math.min(420, (l.width - l.side * 2) * 0.4) : 240;
 
+  // A house recipe has no photo, so it shows the food in the painting it
+  // was opened from, when that painting is already loaded.
+  const painting = artworkId ? peekArtwork(artworkId) : undefined;
+  const box = !recipe.image && painting && artworkId ? cropFor(artworkId, (from ?? '').split(', ')) : undefined;
+  const crop = painting && box ? { uri: painting.image, box } : undefined;
+
   const photo = (
     <View style={{ alignItems: 'center', gap: 14 }}>
-      <RecipePhoto recipe={recipe} style={[styles.photo, { width: photoSize, height: photoSize, borderRadius: phone ? 20 : 24 }]} />
+      <RecipePhoto recipe={recipe} crop={crop} style={[styles.photo, { width: photoSize, height: photoSize, borderRadius: phone ? 20 : 24 }]} />
       {!!from && (
         <Text style={styles.from}>
           From the painting: <Text style={{ color: colors.text }}>{from}</Text>
