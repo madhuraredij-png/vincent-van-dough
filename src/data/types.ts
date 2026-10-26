@@ -6,3 +6,31 @@ export type Artwork = {
   image: string; // image URL on images.metmuseum.org
   sourceUrl: string; // the painting's page on metmuseum.org
 };
+
+// A part of an image, in fractions of its width and height (0 to 1).
+export type Box = { x: number; y: number; w: number; h: number };
+
+export type Ingredient = { name: string; amount: string };
+
+// A recipe as the screens use it. Filled from a TheMealDB meal (see
+// mealdb.ts), or written for this app (see house-recipes.ts).
+export type Recipe = {
+  id: string; // TheMealDB's meal ID, or "vvd-..." for a house recipe
+  by: 'mealdb' | 'house';
+  name: string;
+  image: string; // photo URL on www.themealdb.com; empty for house recipes
+  fill?: readonly [string, string]; // colors standing in for a missing photo
+  ingredients: Ingredient[];
+  steps: string[]; // empty when the source has no written method
+  sourceUrl: string; // empty for house recipes
+};
+
+// What "looking at" a painting produced: the foods spotted in it and the
+// recipes that use them (at most 2, best match first).
+export type ArtworkResult = {
+  spotted: string[];
+  recipes: Recipe[];
+  // Which spotted foods each recipe uses, by recipe ID, for the "From the
+  // painting" line.
+  matches: Record<string, string[]>;
+};

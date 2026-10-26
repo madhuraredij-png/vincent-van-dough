@@ -5,6 +5,7 @@ import { useState, type ReactNode } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
 
 import { ChevronLeft } from '@/components/icons';
+import type { Box } from '@/data/types';
 import { colors, fonts, gilt } from '@/theme';
 
 // Small building blocks shared by every screen.
@@ -80,8 +81,54 @@ export function Painting({ uri, fit = 'cover', style }: { uri: string; fit?: 'co
   );
 }
 
-export function RecipePhoto({ fill, style }: { fill: readonly [string, string]; style?: StyleProp<ViewStyle> }) {
-  return <LinearGradient colors={fill} start={{ x: 0, y: 0 }} end={{ x: 0.9, y: 1 }} style={[{ borderRadius: 16 }, style]} />;
+// A recipe photo from TheMealDB, rounded (Madhura's call). TheMealDB serves
+// each photo at 700px, plus smaller copies: "medium" (350px) is plenty for
+// the list rows and keeps them quick to load on a phone. House recipes have
+// no photo, so a close-up of the food in the painting stands in (Madhura's
+// call); with no close-up marked, a warm color tile does.
+export function RecipePhoto({
+  recipe,
+  crop,
+  size = 'full',
+  style,
+}: {
+  recipe: { image: string; fill?: readonly [string, string] };
+  crop?: { uri: string; box: Box };
+  size?: 'medium' | 'full';
+  style?: StyleProp<ViewStyle>;
+}) {
+  if (!recipe.image && crop) {
+    const { x, y, w, h } = crop.box;
+    // The whole painting, scaled so the box fills this tile and shifted so
+    // the box sits in it; the tile clips the rest.
+    return (
+      <View style={[{ borderRadius: 16, overflow: 'hidden', backgroundColor: colors.surface }, style]}>
+        <Image
+          source={{ uri: crop.uri }}
+          contentFit="fill"
+          transition={250}
+          accessible={false}
+          style={{ position: 'absolute', width: `${100 / w}%`, height: `${100 / h}%`, left: `${(-x / w) * 100}%`, top: `${(-y / h) * 100}%` }}
+        />
+      </View>
+    );
+  }
+  if (!recipe.image) {
+    return (
+      <LinearGradient
+        colors={recipe.fill ?? ['#CDB89A', '#8C6F4E']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0.9, y: 1 }}
+        style={[{ borderRadius: 16 }, style]}
+      />
+    );
+  }
+  const uri = size === 'full' ? recipe.image : `${recipe.image}/${size}`;
+  return (
+    <View style={[{ borderRadius: 16, overflow: 'hidden', backgroundColor: colors.surface }, style]}>
+      <Image source={{ uri }} contentFit="cover" transition={250} accessible={false} style={StyleSheet.absoluteFill} />
+    </View>
+  );
 }
 
 // The antique gold gilt frame. It fills its parent, so place it inside a

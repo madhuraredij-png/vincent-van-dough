@@ -5,9 +5,10 @@ import { AccessibilityInfo, ActivityIndicator, Animated, Easing, StyleSheet, Tex
 import type { Rect } from '@/components/frame-flight';
 import { RecipeRow } from '@/components/recipe-row';
 import { BackButton, Body, FitLine, GiltFrame, Painting, PrimaryButton, Title } from '@/components/ui';
-import { getArtwork, getRecipe, getRecipesFor, isInGallery, peekArtwork } from '@/data/api';
-import { noRecipeButtons, noRecipeLines, type ArtworkResult, type Recipe } from '@/data/mock';
-import type { Artwork } from '@/data/types';
+import { getArtwork, getRecipesFor, isInGallery, peekArtwork } from '@/data/api';
+import { noRecipeButtons, noRecipeLines } from '@/data/copy';
+import { cropFor } from '@/data/crops';
+import type { Artwork, ArtworkResult, Recipe } from '@/data/types';
 import { loadingPaintingRect, TITLE_GAP, TITLE_ROW_HEIGHT, useLayout, type Layout } from '@/lib/layout';
 import { colors, fonts, gilt, motion } from '@/theme';
 
@@ -19,6 +20,7 @@ let emptyVisits = 0;
 const ROW = 100; // one recipe row: 84px photo + padding
 const ROW_GAP = 14;
 const SPOTTED = 22;
+const CREDIT = 18; // room under the painting for the "Image: The Met" caption
 
 // Screen 2: the chosen painting with up to two recipes. It opens in the
 // "Finding recipes" state (big painting, toast), then the painting settles
@@ -48,7 +50,7 @@ export default function Recipes() {
     settle.setValue(0);
     try {
       const r = await getRecipesFor(id);
-      if (r.recipeIds.length === 0) {
+      if (r.recipes.length === 0) {
         setEmpty({
           line: noRecipeLines[emptyVisits % noRecipeLines.length],
           button: noRecipeButtons[emptyVisits % noRecipeButtons.length],
@@ -108,7 +110,7 @@ export default function Recipes() {
     );
   }
 
-  const recipes = (result?.recipeIds ?? []).map(getRecipe).filter((r): r is Recipe => !!r);
+  const recipes = result?.recipes ?? [];
   const desktop = l.bp === 'desktop';
   const titleSize = l.bp === 'phone' ? 28 : l.bp === 'tablet' ? 32 : 34;
   const start = loadingPaintingRect(l);
@@ -133,15 +135,20 @@ export default function Recipes() {
           {artwork.title}
         </FitLine>
       )}
-      {/* Credit only, no link (Madhura's call). Met Open Access images are CC0. */}
       <FitLine size={13} min={11} fontFamily={fonts.medium} style={styles.artist}>
-        {`${artwork.artist} · Image: The Met`}
+        {artwork.artist}
       </FitLine>
     </View>
   );
 
   const goToRecipe = (r: Recipe) =>
-    router.push({ pathname: '/recipe/[id]', params: { id: r.id, from: (result?.matches[r.id] ?? []).join(', ') } });
+    router.push({ pathname: '/recipe/[id]', params: { id: r.id, artwork: id, from: (result?.matches[r.id] ?? []).join(', ') } });
+
+  // House recipes show a close-up of their food in this painting.
+  const cropOf = (r: Recipe) => {
+    const box = r.image ? undefined : cropFor(id, result?.matches[r.id] ?? []);
+    return box && { uri: artwork.image, box };
+  };
 
   const details =
     status !== 'ready' || !result ? null : recipes.length === 0 ? (
@@ -163,7 +170,7 @@ export default function Recipes() {
         </Text>
         <View style={{ gap: ROW_GAP }}>
           {recipes.map((r, i) => (
-            <RecipeRow key={r.id} recipe={r} index={i} size={desktop ? 96 : 84} onPress={() => goToRecipe(r)} />
+            <RecipeRow key={r.id} recipe={r} crop={cropOf(r)} index={i} size={desktop ? 96 : 84} onPress={() => goToRecipe(r)} />
           ))}
         </View>
       </View>
@@ -224,6 +231,10 @@ export default function Recipes() {
           <GiltFrame />
         </Animated.View>
         <Painting uri={artwork.image} style={StyleSheet.absoluteFill} />
+        {/* Credit only, no link, as a caption under the painting so long
+            artist names can't push it off screen (Madhura's calls). Met Open
+            Access images are CC0. It appears with the recipes. */}
+        <Animated.Text style={[styles.credit, { opacity: reveal.opacity }]}>Image: The Met</Animated.Text>
       </Animated.View>
 
       {status === 'loading' && (
@@ -249,8 +260,8 @@ function resultGeometry(l: Layout, count: number): { painting: Rect; below: obje
   if (l.bp === 'desktop') {
     const top = l.top + 44 + 16;
     const maxH = l.height - top - l.bottom;
-    const width = Math.min((maxH * 3) / 4, contentW * 0.52);
-    const height = Math.min(maxH, (width * 4) / 3);
+    const width = Math.min(((maxH - CREDIT) * 3) / 4, contentW * 0.52);
+    const height = Math.min(maxH - CREDIT, (width * 4) / 3);
     const left = l.side + width + 56;
     return {
       painting: { x: l.side, y: top, width, height },
@@ -260,11 +271,11 @@ function resultGeometry(l: Layout, count: number): { painting: Rect; below: obje
   const y = l.top + TITLE_ROW_HEIGHT + TITLE_GAP;
   const belowH = count === 0 ? 190 : SPOTTED + 18 + count * ROW + (count - 1) * ROW_GAP;
   const cap = contentW * (l.bp === 'phone' ? 1.4 : 0.8);
-  const height = Math.max(220, Math.min(cap, l.height - y - l.bottom - TITLE_GAP - belowH));
+  const height = Math.max(220, Math.min(cap, l.height - y - l.bottom - TITLE_GAP - CREDIT - belowH));
   const belowW = Math.min(contentW, 560);
   return {
     painting: { x: l.side, y, width: contentW, height },
-    below: { top: y + height + TITLE_GAP, bottom: l.bottom, left: (l.width - belowW) / 2, width: belowW, justifyContent: count === 0 ? 'center' : 'flex-start' },
+    below: { top: y + height + CREDIT + TITLE_GAP, bottom: l.bottom, left: (l.width - belowW) / 2, width: belowW, justifyContent: count === 0 ? 'center' : 'flex-start' },
   };
 }
 
@@ -291,6 +302,7 @@ const styles = StyleSheet.create({
   },
   toastText: { fontFamily: fonts.semibold, fontSize: 15, color: colors.background },
   below: { position: 'absolute' },
+  credit: { position: 'absolute', top: '100%', left: 0, right: 0, marginTop: 4, fontFamily: fonts.medium, fontSize: 11, lineHeight: 14, color: colors.textMuted, textAlign: 'center' },
   spotted: { fontFamily: fonts.regular, fontSize: 14, color: colors.textMuted, textAlign: 'center' },
   emptyBox: { flex: 1, justifyContent: 'space-evenly', gap: 18 },
   wideButton: { alignSelf: 'center', minWidth: 280 },
