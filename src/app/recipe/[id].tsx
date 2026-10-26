@@ -1,11 +1,11 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
-import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { ChevronDown, ExternalArrow } from '@/components/icons';
 import { BackButton, Body, PrimaryButton, RecipePhoto, Title } from '@/components/ui';
-import { getRecipe } from '@/data/api';
-import type { Recipe } from '@/data/mock';
+import { getRecipe, peekRecipe } from '@/data/api';
+import type { Recipe } from '@/data/types';
 import { TITLE_ROW_HEIGHT, useLayout } from '@/lib/layout';
 import { colors, fonts } from '@/theme';
 
@@ -14,14 +14,35 @@ import { colors, fonts } from '@/theme';
 // photo on the left and ingredients plus steps on the right.
 export default function RecipeDetails() {
   const { id, from } = useLocalSearchParams<{ id: string; from?: string }>();
-  const recipe = getRecipe(id);
   const l = useLayout();
+  // After a tap the recipe is already loaded. Opened from a link, it's
+  // fetched from TheMealDB first.
+  const [recipe, setRecipe] = useState<Recipe | undefined>(() => peekRecipe(id));
+  const [failed, setFailed] = useState(false);
+
+  const load = useCallback(() => {
+    setFailed(false);
+    getRecipe(id).then(setRecipe, () => setFailed(true));
+  }, [id]);
+
+  useEffect(() => {
+    if (recipe?.id !== id) load();
+  }, [recipe, id, load]);
+
+  if (failed) {
+    return (
+      <View style={[styles.screen, styles.center, { gap: 14 }]}>
+        <Body style={{ textAlign: 'center' }}>We couldn&apos;t load that recipe. Check your connection and try again.</Body>
+        <PrimaryButton label="Try again" onPress={load} style={{ marginTop: 4, minWidth: 240 }} />
+        <PrimaryButton label="Back to the gallery" onPress={() => router.replace('/')} style={{ minWidth: 240 }} />
+      </View>
+    );
+  }
 
   if (!recipe) {
     return (
-      <View style={[styles.screen, styles.center]}>
-        <Body>We couldn&apos;t find that recipe.</Body>
-        <PrimaryButton label="Back to the gallery" onPress={() => router.replace('/')} style={{ marginTop: 16 }} />
+      <View accessibilityRole="progressbar" accessibilityLabel="Loading recipe" style={[styles.screen, styles.center]}>
+        <ActivityIndicator color={colors.textMuted} />
       </View>
     );
   }
@@ -32,7 +53,7 @@ export default function RecipeDetails() {
 
   const photo = (
     <View style={{ alignItems: 'center', gap: 14 }}>
-      <RecipePhoto fill={recipe.fill} style={[styles.photo, { width: photoSize, height: photoSize, borderRadius: phone ? 20 : 24 }]} />
+      <RecipePhoto uri={recipe.image} style={[styles.photo, { width: photoSize, height: photoSize, borderRadius: phone ? 20 : 24 }]} />
       {!!from && (
         <Text style={styles.from}>
           From the painting: <Text style={{ color: colors.text }}>{from}</Text>
@@ -108,7 +129,7 @@ function Ingredients({ recipe }: { recipe: Recipe }) {
       </Pressable>
       {open &&
         recipe.ingredients.map((ing, i) => (
-          <View key={ing.name} style={[styles.ingredient, i === 0 && { borderTopWidth: 0 }]}>
+          <View key={i} style={[styles.ingredient, i === 0 && { borderTopWidth: 0 }]}>
             <Text style={styles.ingName}>{ing.name}</Text>
             <Text style={styles.ingAmount}>{ing.amount}</Text>
           </View>

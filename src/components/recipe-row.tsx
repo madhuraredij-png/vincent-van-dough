@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, Text } from 'react-native';
 
 import { RecipePhoto } from '@/components/ui';
-import type { Recipe } from '@/data/mock';
+import type { Recipe } from '@/data/types';
 import { colors, fonts } from '@/theme';
 
 // One recipe on the recipes screen: a slightly tilted photo with the name
@@ -54,7 +54,7 @@ export function RecipeRow({
           ],
         }}
       >
-        <RecipePhoto fill={recipe.fill} style={[styles.photo, { width: size, height: size }]} />
+        <RecipePhoto uri={recipe.image} size="medium" style={[styles.photo, { width: size, height: size }]} />
       </Animated.View>
       <Text style={[styles.name, active && { color: colors.iris }]}>{recipe.name}</Text>
     </Pressable>

@@ -1,17 +1,19 @@
-import { deal, newDeck, type Deck } from './deck';
+import { deal, newDeck, shuffle, type Deck } from './deck';
 import { GALLERY_IDS, SHUFFLE } from './gallery';
 import { cachedArtwork, fetchArtwork } from './met';
-import { recipes, results, type ArtworkResult, type Recipe } from './mock';
-import type { Artwork } from './types';
+import { FOODS } from './foods';
+import { rankMeals, type Food, type MealHit } from './match';
+import { cachedRecipe, fetchRecipe, searchIngredient } from './mealdb';
+import type { Artwork, ArtworkResult, Recipe } from './types';
 
 // The app talks to its data only through these functions. Paintings come
-// from the Met (Milestone 2). Recipes are still sample data with a short
-// pause, so loading states are visible, until Milestone 3.
+// from the Met (Milestone 2) and recipes from TheMealDB (Milestone 3). The
+// foods in each painting are hand-listed in foods.ts until Milestone 4.
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// A query string like ?demo=gallery-error lets a reviewer force a state
-// that normal tapping can't reach (the gallery failing to load).
+// A query string like ?demo=gallery-error (or kitchen-error) lets a reviewer
+// force a state that normal tapping can't reach, like a service failing.
 function demoFlag(): string | null {
   if (typeof window === 'undefined' || !window.location) return null;
   return new URLSearchParams(window.location.search).get('demo');
@@ -52,19 +54,52 @@ export function peekArtwork(id: string): Artwork | undefined {
   return cachedArtwork(id);
 }
 
-const failedOnce = new Set<string>();
+// Up to two recipes per painting, as approved in the designs.
+const MAX_RECIPES = 2;
 
-export async function getRecipesFor(artworkId: string): Promise<ArtworkResult> {
-  await wait(1600);
-  const result = results[Math.max(0, GALLERY_IDS.indexOf(artworkId)) % results.length];
-  if (result === 'error' && !failedOnce.has(artworkId)) {
-    failedOnce.add(artworkId);
-    throw new Error('Recipes unavailable (demo)');
+// Equally good recipes are shuffled, so each visit to a painting can show a
+// different pair (Madhura's call, 2026-10-26). false keeps them by name.
+const SHUFFLE_TIES = true;
+
+// Each painting's TheMealDB searches, remembered for the visit. A failure
+// is forgotten so "Try again" retries.
+const searches = new Map<string, Promise<MealHit[][]>>();
+
+function searchFoods(artworkId: string, foods: Food[]): Promise<MealHit[][]> {
+  let p = searches.get(artworkId);
+  if (!p) {
+    // One list per food, merging the searches for each of its names.
+    p = Promise.all(foods.map(async (food) => (await Promise.all(food.ingredients.map(searchIngredient))).flat()));
+    p.catch(() => searches.delete(artworkId));
+    searches.set(artworkId, p);
   }
-  if (result === 'error') return { spotted: ['bread'], recipeIds: ['r3'], matches: { r3: ['bread'] } };
-  return result;
+  return p;
 }
 
-export function getRecipe(id: string): Recipe | undefined {
-  return recipes[id];
+// Searches TheMealDB once per ingredient name, ranks the meals by how many
+// of the painting's foods they use (see match.ts), then loads the top two
+// in full so their photos and steps are ready.
+export async function getRecipesFor(artworkId: string): Promise<ArtworkResult> {
+  if (demoFlag() === 'kitchen-error') {
+    await wait(900);
+    throw new Error('Recipes unavailable (demo)');
+  }
+  const foods = FOODS[artworkId] ?? [];
+  const hits = await searchFoods(artworkId, foods);
+  const top = rankMeals(foods, hits, SHUFFLE_TIES ? (tied) => shuffle(tied) : undefined).slice(0, MAX_RECIPES);
+  const recipes = await Promise.all(top.map((r) => fetchRecipe(r.meal.id)));
+  return {
+    spotted: foods.map((f) => f.label),
+    recipes,
+    matches: Object.fromEntries(top.map((r) => [r.meal.id, r.foods])),
+  };
+}
+
+export function getRecipe(id: string): Promise<Recipe> {
+  return fetchRecipe(id);
+}
+
+// Already-loaded recipe, if any, so the recipe screen can draw without waiting.
+export function peekRecipe(id: string): Recipe | undefined {
+  return cachedRecipe(id);
 }
