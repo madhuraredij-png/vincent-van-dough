@@ -68,16 +68,26 @@ const searches = new Map<string, Promise<MealHit[][]>>();
 function searchFoods(artworkId: string, foods: Food[]): Promise<MealHit[][]> {
   let p = searches.get(artworkId);
   if (!p) {
-    // One list per food, merging the searches for each of its names.
-    p = Promise.all(foods.map(async (food) => (await Promise.all(food.ingredients.map(searchIngredient))).flat()));
+    // One list per food, merging the searches for each of its names with
+    // the food's own dish recipes, if it is a prepared food.
+    p = Promise.all(
+      foods.map(async (food) => {
+        const [found, dishes] = await Promise.all([
+          Promise.all(food.ingredients.map(searchIngredient)),
+          Promise.all((food.dishes ?? []).map(fetchRecipe)),
+        ]);
+        return [...found.flat(), ...dishes.map(({ id, name, image }) => ({ id, name, image }))];
+      }),
+    );
     p.catch(() => searches.delete(artworkId));
     searches.set(artworkId, p);
   }
   return p;
 }
 
-// Searches TheMealDB once per ingredient name, ranks the meals by how many
-// of the painting's foods they use (see match.ts), then loads the top two
+// Searches TheMealDB once per ingredient name, ranks the meals (a prepared
+// food's own recipe first, then by how many of the painting's foods they
+// use; see match.ts), then loads the top two
 // in full so their photos and steps are ready.
 export async function getRecipesFor(artworkId: string): Promise<ArtworkResult> {
   if (demoFlag() === 'kitchen-error') {

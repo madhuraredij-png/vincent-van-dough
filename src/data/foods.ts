@@ -7,6 +7,8 @@ import type { Food } from './match';
 // www.themealdb.com/api/json/v1/1/list.php?i=list). An empty list means
 // TheMealDB has no recipes with that food, so it is shown but not searched.
 // Written f(label, ...ingredients) to keep each artwork on one line.
+// A prepared food adds `dishes`: the TheMealDB meal IDs of its own recipe,
+// shown first (Madhura's rule, 2026-10-26).
 // An artwork with no entry shows the no-recipes screen.
 const f = (label: string, ...ingredients: string[]): Food => ({ label, ingredients });
 
@@ -20,7 +22,8 @@ export const FOODS: Record<string, Food[]> = {
   // Strawberries
   '436963': [f('strawberries', 'Strawberries')],
   // Still Life with Ham
-  '437513': [f('ham', 'Ham', 'Smoked Ham'), f('bread', 'Bread'), f('wine', 'Red Wine')],
+  '437513': [{ ...f('ham', 'Ham', 'Smoked Ham'), dishes: ['53302'] }, // Slow-roasted ham with lemon, garlic & sage
+    f('bread', 'Bread'), f('wine', 'Red Wine')],
   // Still Life
   '436305': [f('lemon', 'Lemon', 'Lemons'), f('bread', 'Bread'), f('walnuts', 'Walnuts'), f('wine', 'White Wine', 'Dry White Wine')],
   // Still Life with a Glass and Oysters
@@ -42,7 +45,8 @@ export const FOODS: Record<string, Food[]> = {
   // Still Life with Strawberries
   '436345': [f('strawberries', 'Strawberries'), f('peas', 'Peas', 'Frozen Peas'), f('asparagus', 'Asparagus'), f('artichoke')],
   // New Year's Sake and Sushi
-  '54455': [f('sushi', 'Sushi Rice'), f('tuna', 'Tuna'), f('sake', 'Sake')],
+  '54455': [{ ...f('sushi', 'Sushi Rice'), dishes: ['53065'] }, // Sushi
+    f('tuna', 'Tuna'), f('sake', 'Sake')],
   // Wine Goblet and Lacquer Food Box with New Year's Meal
   '54731': [f('rice', 'Rice'), f('shrimp', 'Shrimp', 'Prawns'), f('sake', 'Sake')],
   // Teabowl and Powder Cake in a Tube
@@ -78,5 +82,6 @@ export const FOODS: Record<string, Food[]> = {
   // The Breakfast
   '810982': [f('turkey', 'Turkey'), f('bread', 'Bread')],
   // At Dinner
-  '811061': [f('chicken', 'Chicken'), f('eggs', 'Eggs')],
+  '811061': [{ ...f('chicken', 'Chicken'), dishes: ['53280'] }, // Algerian Roast Chicken
+    f('eggs', 'Eggs')],
 };

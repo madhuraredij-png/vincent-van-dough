@@ -57,6 +57,20 @@ test('a tie-break only shuffles equally good matches', () => {
   assert.deepEqual(r.map((x) => x.meal.id), ['9', '2', '1']);
 });
 
+test('the recipe for a prepared food comes first', () => {
+  // A print of sushi with sake: the sushi recipe beats a recipe using both.
+  const sushi: Food = { label: 'sushi', ingredients: ['Sushi Rice'], dishes: ['7'] };
+  const sake: Food = { label: 'sake', ingredients: ['Sake'] };
+  const r = rankMeals([sushi, sake], [[meal('7', 'Sushi'), meal('1', 'Rice bowl')], [meal('1', 'Rice bowl')]]);
+  assert.deepEqual(r.map((x) => [x.meal.id, x.dish]), [['7', true], ['1', false]]);
+});
+
+test('several dish recipes are shuffled together, ahead of the rest', () => {
+  const bread: Food = { label: 'bread', ingredients: ['Bread'], dishes: ['1', '2'] };
+  const r = rankMeals([bread, pear], [[meal('1', 'A'), meal('2', 'B'), meal('3', 'C')], [meal('3', 'C')]], (t) => [...t].reverse());
+  assert.deepEqual(r.map((x) => x.meal.id), ['2', '1', '3']);
+});
+
 test('a tie-break never lifts a weaker match above a stronger one', () => {
   const r = rankMeals([pear, grapes], [[meal('1'), meal('2'), meal('3')], [meal('3')]], (t) => [...t].reverse());
   assert.equal(r[0].meal.id, '3');
