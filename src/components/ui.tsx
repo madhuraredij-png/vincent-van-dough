@@ -1,3 +1,4 @@
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import type { ReactNode } from 'react';
@@ -20,17 +21,15 @@ export function Body({ children, style, muted }: { children: ReactNode; style?: 
   return <Text style={[styles.body, muted && { color: colors.textMuted }, style]}>{children}</Text>;
 }
 
-// Stand-in for a painting until real Met images arrive in Milestone 2.
-// Paintings have square corners (Madhura's call); recipe photos are rounded.
-export function PaintingPlaceholder({ fill, style, label = true }: { fill: readonly [string, string]; style?: StyleProp<ViewStyle>; label?: boolean }) {
+// A painting from the Met. Square corners (Madhura's call); recipe photos
+// are rounded. The dark surface shows while the image downloads.
+// expo-image caches downloads, so the same painting on the next screen
+// appears at once.
+export function Painting({ uri, fit = 'cover', style }: { uri: string; fit?: 'cover' | 'contain'; style?: StyleProp<ViewStyle> }) {
   return (
-    <LinearGradient colors={fill} start={{ x: 0, y: 0 }} end={{ x: 0.9, y: 1 }} style={[{ overflow: 'hidden' }, style]}>
-      {label && (
-        <View style={styles.pill}>
-          <Text style={styles.pillText}>PAINTING PLACEHOLDER</Text>
-        </View>
-      )}
-    </LinearGradient>
+    <View style={[{ overflow: 'hidden', backgroundColor: colors.surface }, style]}>
+      <Image source={{ uri }} contentFit={fit} transition={250} accessible={false} style={StyleSheet.absoluteFill} />
+    </View>
   );
 }
 
@@ -75,16 +74,6 @@ export function PrimaryButton({ label, onPress, style }: { label: string; onPres
 
 const styles = StyleSheet.create({
   body: { fontFamily: fonts.regular, fontSize: 15, lineHeight: 22, color: colors.text },
-  pill: {
-    position: 'absolute',
-    top: 14,
-    left: 14,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: 999,
-    backgroundColor: 'rgba(20,18,16,0.6)',
-  },
-  pillText: { fontFamily: fonts.semibold, fontSize: 11, letterSpacing: 0.66, color: '#FFFFFF' },
   back: { width: 44, height: 44, marginLeft: -10, alignItems: 'center', justifyContent: 'center' },
   primary: {
     minHeight: 56,

@@ -4,9 +4,9 @@ import { AccessibilityInfo, Animated, Pressable, StyleSheet, Text, View } from '
 
 import { FrameFlight, type Rect } from '@/components/frame-flight';
 import { BrokenImage, Refresh } from '@/components/icons';
-import { Body, PaintingPlaceholder, PrimaryButton, Title } from '@/components/ui';
+import { Body, Painting, PrimaryButton, Title } from '@/components/ui';
 import { getArtworks } from '@/data/api';
-import type { Artwork } from '@/data/mock';
+import type { Artwork } from '@/data/types';
 import { loadingPaintingRect, useLayout } from '@/lib/layout';
 import { colors, fonts } from '@/theme';
 
@@ -105,7 +105,7 @@ export default function ChooseArtwork() {
                     onPress={() => open(a)}
                     style={({ pressed }) => [styles.card, pressed && { opacity: 0.9 }]}
                   >
-                    <PaintingPlaceholder fill={a.fill} style={StyleSheet.absoluteFill} />
+                    <Painting uri={a.image} style={StyleSheet.absoluteFill} />
                   </Pressable>
                 ))}
           </View>
@@ -118,7 +118,7 @@ export default function ChooseArtwork() {
         <FrameFlight
           from={flight.from}
           to={loadingPaintingRect(l)}
-          fill={flight.artwork.fill}
+          image={flight.artwork.image}
           onGrowStart={() => Animated.timing(fade, { toValue: 0, duration: 500, useNativeDriver: false }).start()}
           onDone={() => router.push({ pathname: '/artwork/[id]', params: { id: flight.artwork.id, framed: '1' } })}
         />
