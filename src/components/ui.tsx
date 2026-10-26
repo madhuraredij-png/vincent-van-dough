@@ -9,9 +9,9 @@ import { colors, fonts, gilt } from '@/theme';
 
 // Small building blocks shared by every screen.
 
-export function Title({ children, size = 28, style }: { children: ReactNode; size?: number; style?: StyleProp<TextStyle> }) {
+export function Title({ children, size = 28, lines, style }: { children: ReactNode; size?: number; lines?: number; style?: StyleProp<TextStyle> }) {
   return (
-    <Text accessibilityRole="header" style={[{ fontFamily: fonts.serif, fontSize: size, lineHeight: size * 1.1, color: colors.text }, style]}>
+    <Text accessibilityRole="header" numberOfLines={lines} style={[{ fontFamily: fonts.serif, fontSize: size, lineHeight: size * 1.1, color: colors.text }, style]}>
       {children}
     </Text>
   );

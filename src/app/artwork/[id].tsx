@@ -121,10 +121,15 @@ export default function Recipes() {
 
   const titleBlock = (
     <View style={styles.titleBlock}>
-      <Title size={titleSize} style={{ textAlign: 'center' }}>
+      {/* Some Met titles run to 15 words. The phone and tablet header row has
+          room for one line, so longer titles end in "…"; desktop shows up to 3. */}
+      <Title size={titleSize} lines={desktop ? 3 : 1} style={{ textAlign: 'center' }}>
         {artwork.title}
       </Title>
-      <Text style={styles.artist}>{artwork.artist}</Text>
+      {/* Credit only, no link (Madhura's call). Met Open Access images are CC0. */}
+      <Text numberOfLines={1} style={styles.artist}>
+        {artwork.artist} · Image: The Met
+      </Text>
     </View>
   );
 
@@ -260,7 +265,7 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   center: { alignItems: 'center', justifyContent: 'center', padding: 24 },
   titleRow: { position: 'absolute', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 44 },
-  titleBlock: { alignItems: 'center', gap: 4 },
+  titleBlock: { alignItems: 'center', alignSelf: 'stretch', gap: 4 },
   artist: { fontFamily: fonts.medium, fontSize: 13, color: colors.textMuted, textAlign: 'center' },
   backSlot: { position: 'absolute', zIndex: 2 },
   frame: { position: 'absolute', top: -gilt.thickness, left: -gilt.thickness, right: -gilt.thickness, bottom: -gilt.thickness },
