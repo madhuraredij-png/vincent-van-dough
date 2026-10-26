@@ -12,9 +12,13 @@ import type { Food } from './match';
 // An artwork with no entry shows the no-recipes screen.
 const f = (label: string, ...ingredients: string[]): Food => ({ label, ingredients });
 
+// TheMealDB's bread recipes: Rye bread, Danish Rye Bread, Kulaç Soda Bread.
+const BREADS = ['53308', '53556', '53408'];
+
 export const FOODS: Record<string, Food[]> = {
   // The Brioche
-  '436946': [f('brioche', 'Bread'), f('plums'), f('peaches', 'Peaches'), f('grapes')],
+  '436946': [{ ...f('brioche', 'Bread'), dishes: BREADS }, // no brioche recipe in TheMealDB, so breads
+    f('plums'), f('peaches', 'Peaches'), f('grapes')],
   // Still Life with Apples and Pears
   '435883': [f('apples', 'Apples', 'Cooking Apples'), f('pears', 'Pears')],
   // Still Life with a Ginger Jar and Eggplants
@@ -72,7 +76,7 @@ export const FOODS: Record<string, Food[]> = {
   // Broken Eggs
   '436579': [f('eggs', 'Eggs')],
   // Baker Boy
-  '398223': [f('bread', 'Bread', 'Bread Rolls')],
+  '398223': [{ ...f('bread', 'Bread', 'Bread Rolls'), dishes: BREADS }],
   // The Feast of Acheloüs
   '437525': [f('oysters', 'Oysters'), f('fish', 'White Fish', 'Fish fillet'), f('lobster', 'Lobster')],
   // Halt of the Hunt
